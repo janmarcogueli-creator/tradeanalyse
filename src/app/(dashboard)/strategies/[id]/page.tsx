@@ -15,6 +15,9 @@ import { getStrategyById } from "@/db/queries/strategies";
 import { StrategyForm } from "@/components/strategies/strategy-form";
 import { ArchiveToggleButton } from "@/components/strategies/archive-toggle-button";
 import { formatMoney } from "@/lib/utils/format";
+import { buildEquityCurve } from "@/lib/metrics/equity";
+import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import type { ClosedTrade } from "@/lib/metrics/types";
 
 export default async function StrategyDetailPage({
   params,
@@ -27,6 +30,22 @@ export default async function StrategyDetailPage({
   if (!strategy) notFound();
 
   const trades = strategy.tradeStrategies.map((ts) => ts.trade);
+  const closedTrades: ClosedTrade[] = trades
+    .filter((t): t is typeof t & { closeTime: string; netPnl: number; grossPnl: number } =>
+      t.status === "closed" && t.closeTime !== null && t.netPnl !== null && t.grossPnl !== null,
+    )
+    .map((t) => ({
+      id: t.id,
+      symbol: t.symbol,
+      assetCategory: t.assetCategory,
+      direction: t.direction,
+      closeTime: t.closeTime,
+      netPnl: t.netPnl,
+      grossPnl: t.grossPnl,
+      commissions: t.commissions,
+      holdingSeconds: t.holdingSeconds,
+    }));
+  const equityCurve = buildEquityCurve(closedTrades);
 
   return (
     <div className="flex flex-col gap-4">
@@ -66,6 +85,17 @@ export default async function StrategyDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {closedTrades.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Equity Curve</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EquityCurveChart data={equityCurve} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

@@ -1,6 +1,16 @@
 import type { getFilteredClosedTrades } from "@/db/queries/trades";
-import { calculateMetrics, calcPnlByWeekdayHour, type WeekdayBreakdown } from "./calculate";
-import type { ClosedTrade, MetricsResult } from "./types";
+import {
+  calculateMetrics,
+  calcDailyPnl,
+  calcPnlByWeekdayHour,
+  buildPnlHistogram,
+  type DailyPnl,
+  type HistogramBucket,
+  type WeekdayBreakdown,
+} from "./calculate";
+import { buildEquityCurve } from "./equity";
+import { buildDrawdownCurve } from "./drawdown";
+import type { ClosedTrade, EquityPoint, DrawdownPoint, MetricsResult } from "./types";
 
 type JoinedTrade = Awaited<ReturnType<typeof getFilteredClosedTrades>>[number];
 
@@ -24,11 +34,23 @@ export interface GroupMetrics {
   metrics: MetricsResult;
 }
 
+export interface DurationPnlPoint {
+  symbol: string;
+  holdingSeconds: number;
+  netPnl: number;
+}
+
 export interface DashboardPayload {
   metrics: MetricsResult;
   weekdayBreakdown: WeekdayBreakdown[];
   byStrategy: GroupMetrics[];
   byAssetClass: GroupMetrics[];
+  bySymbol: GroupMetrics[];
+  equityCurve: EquityPoint[];
+  drawdownCurve: DrawdownPoint[];
+  dailyPnl: DailyPnl[];
+  histogram: HistogramBucket[];
+  durationVsPnl: DurationPnlPoint[];
 }
 
 function sortByNetPnlDesc(a: GroupMetrics, b: GroupMetrics) {
@@ -54,6 +76,13 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     }
   }
 
+  const bySymbolMap = new Map<string, ClosedTrade[]>();
+  for (const t of closed) {
+    const list = bySymbolMap.get(t.symbol) ?? [];
+    list.push(t);
+    bySymbolMap.set(t.symbol, list);
+  }
+
   return {
     metrics: calculateMetrics(closed),
     weekdayBreakdown: calcPnlByWeekdayHour(closed),
@@ -63,5 +92,15 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     byAssetClass: Array.from(byAssetClassMap.entries())
       .map(([key, trades]) => ({ key, label: key, metrics: calculateMetrics(trades) }))
       .sort(sortByNetPnlDesc),
+    bySymbol: Array.from(bySymbolMap.entries())
+      .map(([key, trades]) => ({ key, label: key, metrics: calculateMetrics(trades) }))
+      .sort(sortByNetPnlDesc),
+    equityCurve: buildEquityCurve(closed),
+    drawdownCurve: buildDrawdownCurve(buildEquityCurve(closed)),
+    dailyPnl: calcDailyPnl(closed),
+    histogram: buildPnlHistogram(closed),
+    durationVsPnl: closed
+      .filter((t): t is ClosedTrade & { holdingSeconds: number } => t.holdingSeconds !== null)
+      .map((t) => ({ symbol: t.symbol, holdingSeconds: t.holdingSeconds, netPnl: t.netPnl })),
   };
 }

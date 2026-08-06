@@ -10,18 +10,38 @@ import {
 import { StatCard } from "./stat-card";
 import type { DashboardPayload, GroupMetrics } from "@/lib/metrics/buildDashboardPayload";
 import { formatDuration, formatMoney, formatPercent, formatRatio, weekdayLabel } from "@/lib/utils/format";
+import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { DrawdownChart } from "@/components/charts/DrawdownChart";
+import { PnlCalendarHeatmap } from "@/components/charts/PnlCalendarHeatmap";
+import { WinLossHistogram } from "@/components/charts/WinLossHistogram";
+import { StrategyPerformanceChart } from "@/components/charts/StrategyPerformanceChart";
+import { AssetClassPerformanceChart } from "@/components/charts/AssetClassPerformanceChart";
+import { SymbolPerformanceChart } from "@/components/charts/SymbolPerformanceChart";
+import { DurationVsPnlScatter } from "@/components/charts/DurationVsPnlScatter";
 
-function GroupTable({ title, groups, emptyLabel }: { title: string; groups: GroupMetrics[]; emptyLabel: string }) {
+function GroupTable({
+  title,
+  groups,
+  emptyLabel,
+  chart,
+}: {
+  title: string;
+  groups: GroupMetrics[];
+  emptyLabel: string;
+  chart?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4">
         {groups.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
-          <Table>
+          <>
+            {chart}
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{title}</TableHead>
@@ -47,6 +67,7 @@ function GroupTable({ title, groups, emptyLabel }: { title: string; groups: Grou
               ))}
             </TableBody>
           </Table>
+          </>
         )}
       </CardContent>
     </Card>
@@ -87,9 +108,75 @@ export function MetricsOverview({ data }: { data: DashboardPayload }) {
         <StatCard label="Max Loss-Streak" value={String(metrics.maxConsecutiveLosses)} />
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Equity Curve</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EquityCurveChart data={data.equityCurve} />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <GroupTable title="Nach Strategie" groups={data.byStrategy} emptyLabel="Keinem Trade eine Strategie zugeordnet." />
-        <GroupTable title="Nach Asset-Klasse" groups={data.byAssetClass} emptyLabel="Keine Daten." />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Drawdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DrawdownChart data={data.drawdownCurve} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Win/Loss-Verteilung</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WinLossHistogram data={data.histogram} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">PnL-Kalender</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PnlCalendarHeatmap data={data.dailyPnl} />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GroupTable
+          title="Nach Strategie"
+          groups={data.byStrategy}
+          emptyLabel="Keinem Trade eine Strategie zugeordnet."
+          chart={<StrategyPerformanceChart groups={data.byStrategy} />}
+        />
+        <GroupTable
+          title="Nach Asset-Klasse"
+          groups={data.byAssetClass}
+          emptyLabel="Keine Daten."
+          chart={<AssetClassPerformanceChart groups={data.byAssetClass} />}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Symbole (Top/Flop)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SymbolPerformanceChart groups={data.bySymbol} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Haltedauer vs. PnL</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DurationVsPnlScatter data={data.durationVsPnl} />
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

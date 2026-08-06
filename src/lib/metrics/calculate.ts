@@ -88,6 +88,57 @@ export interface WeekdayBreakdown {
   winrate: number | null;
 }
 
+export interface DailyPnl {
+  date: string; // YYYY-MM-DD
+  netPnl: number;
+  tradeCount: number;
+}
+
+/** Net PnL bucketed by calendar day (local date of closeTime) — feeds the PnL calendar heatmap. */
+export function calcDailyPnl(trades: ClosedTrade[]): DailyPnl[] {
+  const byDay = new Map<string, { netPnl: number; tradeCount: number }>();
+  for (const t of trades) {
+    const day = t.closeTime.slice(0, 10);
+    const entry = byDay.get(day) ?? { netPnl: 0, tradeCount: 0 };
+    entry.netPnl += t.netPnl;
+    entry.tradeCount += 1;
+    byDay.set(day, entry);
+  }
+  return Array.from(byDay.entries())
+    .map(([date, v]) => ({ date, ...v }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export interface HistogramBucket {
+  rangeStart: number;
+  rangeEnd: number;
+  count: number;
+}
+
+/** Even-width netPnl histogram (win/loss distribution) split into `bucketCount`
+ * bins spanning the trade set's min..max — losses and wins share one continuous
+ * axis so the bucket straddling zero is visible. */
+export function buildPnlHistogram(trades: ClosedTrade[], bucketCount = 12): HistogramBucket[] {
+  if (trades.length === 0) return [];
+  const pnls = trades.map((t) => t.netPnl);
+  const min = Math.min(...pnls);
+  const max = Math.max(...pnls);
+  if (min === max) return [{ rangeStart: min, rangeEnd: max, count: trades.length }];
+
+  const width = (max - min) / bucketCount;
+  const buckets: HistogramBucket[] = Array.from({ length: bucketCount }, (_, i) => ({
+    rangeStart: min + i * width,
+    rangeEnd: min + (i + 1) * width,
+    count: 0,
+  }));
+
+  for (const pnl of pnls) {
+    const index = Math.min(bucketCount - 1, Math.floor((pnl - min) / width));
+    buckets[index].count += 1;
+  }
+  return buckets;
+}
+
 const MIN_SAMPLE_SIZE = 3;
 
 /** Per-weekday PnL/winrate. Days with fewer than MIN_SAMPLE_SIZE trades still
