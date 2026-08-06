@@ -9,11 +9,7 @@ import { TagPicker } from "@/components/trades/tag-picker";
 import { StrategyPicker } from "@/components/trades/strategy-picker";
 import { NotesPanel } from "@/components/trades/notes-panel";
 import { AttachmentUpload } from "@/components/trades/attachment-upload";
-
-function formatMoney(value: number | null) {
-  if (value === null) return "–";
-  return value.toLocaleString("de-DE", { style: "currency", currency: "USD" });
-}
+import { formatMoney } from "@/lib/utils/format";
 
 export default async function TradeDetailPage({
   params,

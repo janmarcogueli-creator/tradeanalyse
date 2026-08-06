@@ -14,11 +14,7 @@ import {
 import { getStrategyById } from "@/db/queries/strategies";
 import { StrategyForm } from "@/components/strategies/strategy-form";
 import { ArchiveToggleButton } from "@/components/strategies/archive-toggle-button";
-
-function formatMoney(value: number | null) {
-  if (value === null) return "–";
-  return value.toLocaleString("de-DE", { style: "currency", currency: "USD" });
-}
+import { formatMoney } from "@/lib/utils/format";
 
 export default async function StrategyDetailPage({
   params,

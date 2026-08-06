@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, gte, like, lte } from "drizzle-orm";
 import { db } from "@/db/client";
 import { fills, notes, trades } from "@/db/schema";
+import { buildTradeWhereClause } from "@/lib/filters/buildWhereClause";
+import type { FilterState } from "@/lib/filters/types";
 
 export interface TradeFilter {
   symbol?: string;
@@ -35,6 +37,29 @@ export async function listTrades(filter: TradeFilter = {}) {
   return rows.filter((t) => {
     if (filter.strategyId && !t.tradeStrategies.some((ts) => ts.strategyId === filter.strategyId)) return false;
     if (filter.tagId && !t.tradeTags.some((tt) => tt.tagId === filter.tagId)) return false;
+    return true;
+  });
+}
+
+/** Closed trades matching a dashboard FilterState, with strategy/tag joins
+ * for breakdown grouping. Used by the metrics engine (M3) and, later, charts. */
+export async function getFilteredClosedTrades(filter: FilterState = {}) {
+  const rows = await db.query.trades.findMany({
+    where: buildTradeWhereClause(filter),
+    orderBy: [asc(trades.closeTime)],
+    with: {
+      tradeStrategies: { with: { strategy: true } },
+      tradeTags: { with: { tag: true } },
+    },
+  });
+
+  return rows.filter((t) => {
+    if (filter.strategyIds?.length && !t.tradeStrategies.some((ts) => filter.strategyIds!.includes(ts.strategyId))) {
+      return false;
+    }
+    if (filter.tagIds?.length && !t.tradeTags.some((tt) => filter.tagIds!.includes(tt.tagId))) {
+      return false;
+    }
     return true;
   });
 }

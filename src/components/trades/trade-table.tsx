@@ -9,13 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatMoney } from "@/lib/utils/format";
 
 type Trade = Awaited<ReturnType<typeof listTrades>>[number];
-
-function formatMoney(value: number | null) {
-  if (value === null) return "–";
-  return value.toLocaleString("de-DE", { style: "currency", currency: "USD" });
-}
 
 export function TradeTable({ trades }: { trades: Trade[] }) {
   if (trades.length === 0) {
