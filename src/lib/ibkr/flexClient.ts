@@ -125,15 +125,27 @@ export async function requestFlexStatement(
   const { maxRetries = 10, retryDelayMs = 3000 } = options;
 
   const { referenceCode, statementUrl } = await sendRequest(token, queryId);
+  let currentUrl = statementUrl;
+  let triedFallbackUrl = false;
 
-  let lastError: FlexApiError | null = null;
+  let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) await sleep(retryDelayMs);
     try {
-      return await getStatement(token, referenceCode, statementUrl);
+      return await getStatement(token, referenceCode, currentUrl);
     } catch (err) {
       if (err instanceof FlexApiError && err.retryable) {
         lastError = err;
+        continue;
+      }
+      // A raw network failure (DNS, connection reset, ...) on the server-provided
+      // Url — not an IBKR-level FlexApiError — is worth one retry against the
+      // known-good default host before giving up, since it can be transient.
+      const isNetworkError = !(err instanceof FlexApiError);
+      if (isNetworkError && !triedFallbackUrl && currentUrl !== DEFAULT_GET_STATEMENT_URL) {
+        triedFallbackUrl = true;
+        currentUrl = DEFAULT_GET_STATEMENT_URL;
+        lastError = err instanceof Error ? err : new Error(String(err));
         continue;
       }
       throw err;

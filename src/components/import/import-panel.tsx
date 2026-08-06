@@ -84,7 +84,7 @@ export function ImportPanel() {
         <CardHeader>
           <CardTitle>IBKR Flex Query Import</CardTitle>
           <CardDescription>
-            Holt den aktuellen Flex-Query-Report über die IBKR Flex Web Service API (Token/Query-ID aus .env.local).
+            Holt den aktuellen Flex-Query-Report über die IBKR Flex Web Service API (Token/Query-ID unter Settings).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,14 +98,14 @@ export function ImportPanel() {
         <CardHeader>
           <CardTitle>Manueller Upload</CardTitle>
           <CardDescription>
-            Fallback: von Hand exportiertes Flex-Query-XML aus IBKR Client Portal hochladen.
+            Fallback: von Hand exportierten Flex-Query-Report (XML oder CSV) aus IBKR Client Portal hochladen.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xml"
+            accept=".xml,.csv"
             className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-secondary-foreground"
           />
           <Button variant="secondary" onClick={handleUpload} disabled={isUploadLoading}>

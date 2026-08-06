@@ -13,7 +13,9 @@ export async function POST() {
         { status: 502 },
       );
     }
-    const message = err instanceof Error ? err.message : "Import failed";
+    console.error("[api/import/flex]", err);
+    const cause = err instanceof Error && err.cause instanceof Error ? `: ${err.cause.message}` : "";
+    const message = err instanceof Error ? `${err.message}${cause}` : "Import failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

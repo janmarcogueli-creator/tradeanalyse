@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { accounts, fills, importBatches, trades } from "@/db/schema";
 import { requestFlexStatement } from "@/lib/ibkr/flexClient";
 import { parseFlexXml } from "@/lib/ibkr/parseFlexXml";
+import { parseFlexCsv, looksLikeFlexCsv } from "@/lib/ibkr/parseFlexCsv";
 import { mapFlexTrade, MappingError } from "@/lib/ibkr/mapFlexFields";
 import { groupFills, resolvePrimaryTradeIndexForFill, type FillForGrouping } from "./groupTrades";
 import { getIbkrCredentials } from "@/db/queries/settings";
@@ -97,26 +98,29 @@ async function regroupSymbol(accountId: number, symbol: string): Promise<void> {
   }
 }
 
-/** Parses+maps+dedupes+groups an already-fetched FlexQueryResponse XML string
- * into the DB. Shared by the Flex Web Service import and the manual upload
- * fallback. Per-row mapping errors are skipped and collected rather than
- * aborting the whole batch. */
-export async function processImportBatch(xml: string): Promise<ImportSummary> {
+/** Parses+maps+dedupes+groups an already-fetched Flex Query statement (XML or
+ * CSV export — IBKR's Flex Query "Format" setting controls which one a given
+ * query returns, and users may need CSV for other tools) into the DB. Shared
+ * by the Flex Web Service import and the manual upload fallback. Per-row
+ * mapping errors are skipped and collected rather than aborting the whole
+ * batch. */
+export async function processImportBatch(content: string): Promise<ImportSummary> {
   const [batch] = await db
     .insert(importBatches)
     .values({ status: "pending" })
     .returning();
 
+  const isCsv = looksLikeFlexCsv(content);
   const importsDir = path.join(process.cwd(), "data", "imports");
   fs.mkdirSync(importsDir, { recursive: true });
-  const rawXmlPath = path.join(importsDir, `${Date.now()}-batch-${batch.id}.xml`);
-  fs.writeFileSync(rawXmlPath, xml, "utf-8");
+  const rawXmlPath = path.join(importsDir, `${Date.now()}-batch-${batch.id}.${isCsv ? "csv" : "xml"}`);
+  fs.writeFileSync(rawXmlPath, content, "utf-8");
 
   let statements;
   try {
-    statements = parseFlexXml(xml);
+    statements = isCsv ? parseFlexCsv(content) : parseFlexXml(content);
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Failed to parse Flex XML";
+    const errorMessage = err instanceof Error ? err.message : "Failed to parse Flex statement";
     await db
       .update(importBatches)
       .set({ status: "error", errorMessage, rawXmlPath })
