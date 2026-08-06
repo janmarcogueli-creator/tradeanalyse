@@ -7,6 +7,7 @@ import { requestFlexStatement } from "@/lib/ibkr/flexClient";
 import { parseFlexXml } from "@/lib/ibkr/parseFlexXml";
 import { mapFlexTrade, MappingError } from "@/lib/ibkr/mapFlexFields";
 import { groupFills, resolvePrimaryTradeIndexForFill, type FillForGrouping } from "./groupTrades";
+import { getIbkrCredentials } from "@/db/queries/settings";
 
 export interface ImportSummary {
   batchId: number;
@@ -194,11 +195,10 @@ export async function processImportBatch(xml: string): Promise<ImportSummary> {
 }
 
 export async function importFlexStatement(): Promise<ImportSummary> {
-  const token = process.env.IBKR_FLEX_TOKEN;
-  const queryId = process.env.IBKR_FLEX_QUERY_ID;
+  const { token, queryId } = await getIbkrCredentials();
   if (!token || !queryId) {
     throw new Error(
-      "IBKR_FLEX_TOKEN / IBKR_FLEX_QUERY_ID not set — add them to .env.local (see .env.local.example)",
+      "IBKR Flex Token / Query-ID nicht gesetzt — unter Settings eintragen oder in .env.local (siehe .env.local.example)",
     );
   }
 

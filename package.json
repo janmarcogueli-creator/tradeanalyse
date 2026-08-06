@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "test": "vitest run"
+    "test": "vitest run",
+    "perf-test": "tsx scripts/perf-test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
