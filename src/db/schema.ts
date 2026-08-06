@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   sqliteTable,
   text,
@@ -210,3 +210,44 @@ export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+export const tradesRelations = relations(trades, ({ many }) => ({
+  fills: many(fills),
+  notes: many(notes),
+  attachments: many(attachments),
+  tradeStrategies: many(tradeStrategies),
+  tradeTags: many(tradeTags),
+}));
+
+export const fillsRelations = relations(fills, ({ one }) => ({
+  account: one(accounts, { fields: [fills.accountId], references: [accounts.id] }),
+  trade: one(trades, { fields: [fills.tradeGroupId], references: [trades.id] }),
+}));
+
+export const strategiesRelations = relations(strategies, ({ many }) => ({
+  tradeStrategies: many(tradeStrategies),
+}));
+
+export const tradeStrategiesRelations = relations(tradeStrategies, ({ one }) => ({
+  trade: one(trades, { fields: [tradeStrategies.tradeId], references: [trades.id] }),
+  strategy: one(strategies, { fields: [tradeStrategies.strategyId], references: [strategies.id] }),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  tradeTags: many(tradeTags),
+}));
+
+export const tradeTagsRelations = relations(tradeTags, ({ one }) => ({
+  trade: one(trades, { fields: [tradeTags.tradeId], references: [trades.id] }),
+  tag: one(tags, { fields: [tradeTags.tagId], references: [tags.id] }),
+}));
+
+export const notesRelations = relations(notes, ({ one, many }) => ({
+  trade: one(trades, { fields: [notes.tradeId], references: [trades.id] }),
+  attachments: many(attachments),
+}));
+
+export const attachmentsRelations = relations(attachments, ({ one }) => ({
+  trade: one(trades, { fields: [attachments.tradeId], references: [trades.id] }),
+  note: one(notes, { fields: [attachments.noteId], references: [notes.id] }),
+}));
