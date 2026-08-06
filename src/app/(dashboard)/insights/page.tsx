@@ -1,14 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { refreshInsights } from "@/db/queries/insights";
+import { InsightFeed } from "@/components/insights/insight-feed";
 
-export default function InsightsPage() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Insights</CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
-        Regelbasierte Musterkennung (Wochentag, Strategie-Expectancy, Overtrading, ...) folgt in M5.
-      </CardContent>
-    </Card>
-  );
+export default async function InsightsPage() {
+  const insights = await refreshInsights();
+
+  return <InsightFeed insights={insights} />;
 }

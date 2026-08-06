@@ -12,9 +12,9 @@ import { buildEquityCurve } from "./equity";
 import { buildDrawdownCurve } from "./drawdown";
 import type { ClosedTrade, EquityPoint, DrawdownPoint, MetricsResult } from "./types";
 
-type JoinedTrade = Awaited<ReturnType<typeof getFilteredClosedTrades>>[number];
+export type JoinedTrade = Awaited<ReturnType<typeof getFilteredClosedTrades>>[number];
 
-function toClosedTrade(t: JoinedTrade): ClosedTrade {
+export function toClosedTrade(t: JoinedTrade): ClosedTrade {
   return {
     id: t.id,
     symbol: t.symbol,
