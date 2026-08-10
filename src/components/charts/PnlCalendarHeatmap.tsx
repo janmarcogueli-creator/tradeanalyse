@@ -4,15 +4,28 @@ import ReactECharts from "echarts-for-react";
 import type { DailyPnl } from "@/lib/metrics/calculate";
 import { useChartPalette } from "./ChartTheme";
 
+function monthStart(isoDate: string): string {
+  return `${isoDate.slice(0, 7)}-01`;
+}
+
+function monthEnd(isoDate: string): string {
+  const [year, month] = isoDate.slice(0, 7).split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate(); // day 0 of next month = last day of this month
+  return `${isoDate.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
+}
+
 export function PnlCalendarHeatmap({ data }: { data: DailyPnl[] }) {
   const palette = useChartPalette();
 
-  if (data.length === 0) {
-    return <p className="text-sm text-muted-foreground">Keine Daten für den PnL-Kalender.</p>;
-  }
-
   const maxAbs = Math.max(...data.map((d) => Math.abs(d.netPnl)), 1);
-  const range: [string, string] = [data[0].date, data[data.length - 1].date];
+  // Always show complete calendar months (padded to the 1st / last day),
+  // not just the sparse span the data happens to cover — a heatmap that
+  // stops mid-month reads as broken, not as "no more data". With no data at
+  // all, still render the current month's empty grid rather than nothing.
+  const today = new Date().toISOString().slice(0, 10);
+  const firstDate = data[0]?.date ?? today;
+  const lastDate = data[data.length - 1]?.date ?? today;
+  const range: [string, string] = [monthStart(firstDate), monthEnd(lastDate)];
 
   const option = {
     backgroundColor: "transparent",

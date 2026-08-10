@@ -10,6 +10,7 @@ import {
   Upload,
   Settings,
   LineChart,
+  SearchCode,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,6 +28,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/analysis", label: "Analyse", icon: SearchCode },
   { href: "/trades", label: "Trades", icon: ListChecks },
   { href: "/strategies", label: "Strategien", icon: Target },
   { href: "/insights", label: "Insights", icon: Lightbulb },

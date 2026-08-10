@@ -163,6 +163,49 @@ export function calcPnlByWeekdayHour(trades: ClosedTrade[]): WeekdayBreakdown[] 
   });
 }
 
+export interface MonthBreakdown {
+  month: string; // YYYY-MM
+  tradeCount: number;
+  netPnl: number;
+  winrate: number | null;
+}
+
+/** Per-calendar-month PnL/winrate, ordered chronologically. Same
+ * MIN_SAMPLE_SIZE noise guard as the weekday breakdown. */
+export function calcPnlByMonth(trades: ClosedTrade[]): MonthBreakdown[] {
+  const byMonth = new Map<string, ClosedTrade[]>();
+  for (const t of trades) {
+    const month = t.closeTime.slice(0, 7);
+    const list = byMonth.get(month) ?? [];
+    list.push(t);
+    byMonth.set(month, list);
+  }
+
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, monthTrades]) => ({
+      month,
+      tradeCount: monthTrades.length,
+      netPnl: monthTrades.reduce((sum, t) => sum + t.netPnl, 0),
+      winrate: monthTrades.length >= MIN_SAMPLE_SIZE ? calcWinrate(monthTrades) : null,
+    }));
+}
+
+/** Best/worst N closed trades by netPnl — a quick winners/losers leaderboard. */
+export function getTopTrades(
+  trades: ClosedTrade[],
+  n = 10,
+): { winners: ClosedTrade[]; losers: ClosedTrade[] } {
+  const sorted = [...trades].sort((a, b) => b.netPnl - a.netPnl);
+  return {
+    winners: sorted.slice(0, n).filter((t) => t.netPnl > 0),
+    losers: sorted
+      .slice(-n)
+      .reverse()
+      .filter((t) => t.netPnl < 0),
+  };
+}
+
 export function calculateMetrics(trades: ClosedTrade[]): MetricsResult {
   const { avgWin, avgLoss } = calcAvgWinLoss(trades);
   const { largestWin, largestLoss } = calcLargestWinLoss(trades);

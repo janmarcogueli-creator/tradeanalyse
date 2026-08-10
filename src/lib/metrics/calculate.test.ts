@@ -4,6 +4,7 @@ import {
   calcAvgWinLoss,
   calcExpectancy,
   calcLargestWinLoss,
+  calcPnlByMonth,
   calcPnlByWeekdayHour,
   calcProfitFactor,
   calcRRRatio,
@@ -11,6 +12,7 @@ import {
   calcSharpeRatio,
   calcWinrate,
   calculateMetrics,
+  getTopTrades,
 } from "./calculate";
 import type { ClosedTrade } from "./types";
 
@@ -136,5 +138,50 @@ describe("calculate.ts edge cases", () => {
     expect(sharpe).not.toBeNull();
     expect(Number.isFinite(sharpe)).toBe(true);
     expect(sharpe!).toBeGreaterThan(0);
+  });
+});
+
+describe("calcPnlByMonth", () => {
+  it("buckets by calendar month, ordered chronologically", () => {
+    const monthlyTrades = [
+      trade({ id: 1, netPnl: 100, closeTime: "2024-02-15T10:00:00" }),
+      trade({ id: 2, netPnl: -50, closeTime: "2024-01-05T10:00:00" }),
+      trade({ id: 3, netPnl: 25, closeTime: "2024-01-20T10:00:00" }),
+    ];
+    const result = calcPnlByMonth(monthlyTrades);
+    expect(result.map((m) => m.month)).toEqual(["2024-01", "2024-02"]);
+    expect(result[0].tradeCount).toBe(2);
+    expect(result[0].netPnl).toBeCloseTo(-25);
+    expect(result[1].netPnl).toBeCloseTo(100);
+  });
+
+  it("returns [] for no trades", () => {
+    expect(calcPnlByMonth([])).toEqual([]);
+  });
+});
+
+describe("getTopTrades", () => {
+  it("returns winners sorted best-first and losers sorted worst-first", () => {
+    const mixed = [
+      trade({ id: 1, netPnl: 50 }),
+      trade({ id: 2, netPnl: -80 }),
+      trade({ id: 3, netPnl: 200 }),
+      trade({ id: 4, netPnl: -10 }),
+      trade({ id: 5, netPnl: 0 }), // breakeven — neither a winner nor a loser
+    ];
+    const { winners, losers } = getTopTrades(mixed, 10);
+    expect(winners.map((t) => t.id)).toEqual([3, 1]);
+    expect(losers.map((t) => t.id)).toEqual([2, 4]);
+  });
+
+  it("respects the n limit", () => {
+    const manyWinners = Array.from({ length: 20 }, (_, i) => trade({ id: i, netPnl: i + 1 }));
+    const { winners } = getTopTrades(manyWinners, 5);
+    expect(winners).toHaveLength(5);
+    expect(winners[0].netPnl).toBe(20);
+  });
+
+  it("returns empty arrays for no trades", () => {
+    expect(getTopTrades([])).toEqual({ winners: [], losers: [] });
   });
 });

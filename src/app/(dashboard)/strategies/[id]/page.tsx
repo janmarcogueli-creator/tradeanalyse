@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getStrategyById } from "@/db/queries/strategies";
+import { getStrategyById, listStrategyCategories } from "@/db/queries/strategies";
 import { StrategyForm } from "@/components/strategies/strategy-form";
 import { ArchiveToggleButton } from "@/components/strategies/archive-toggle-button";
 import { formatMoney } from "@/lib/utils/format";
@@ -25,7 +25,10 @@ export default async function StrategyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const strategy = await getStrategyById(Number(id));
+  const [strategy, existingCategories] = await Promise.all([
+    getStrategyById(Number(id)),
+    listStrategyCategories(),
+  ]);
 
   if (!strategy) notFound();
 
@@ -56,6 +59,7 @@ export default async function StrategyDetailPage({
             <Badge variant={strategy.status === "active" ? "default" : "secondary"}>
               {strategy.status === "active" ? "aktiv" : "archiviert"}
             </Badge>
+            {strategy.category && <Badge variant="outline">{strategy.category}</Badge>}
           </CardTitle>
           <div className="flex gap-2">
             <StrategyForm
@@ -65,7 +69,9 @@ export default async function StrategyDetailPage({
                 name: strategy.name,
                 description: strategy.description ?? "",
                 rulesText: strategy.rulesText ?? "",
+                category: strategy.category ?? "",
               }}
+              existingCategories={existingCategories}
             />
             <ArchiveToggleButton strategyId={strategy.id} status={strategy.status} />
           </div>

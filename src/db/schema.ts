@@ -130,6 +130,7 @@ export const strategies = sqliteTable("strategies", {
     .notNull()
     .default("active"),
   color: text("color"),
+  category: text("category"),
 });
 
 export const tradeStrategies = sqliteTable(

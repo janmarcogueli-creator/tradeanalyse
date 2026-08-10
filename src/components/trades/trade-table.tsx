@@ -10,10 +10,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatMoney } from "@/lib/utils/format";
+import { InlineStrategyPicker } from "./inline-strategy-picker";
 
 type Trade = Awaited<ReturnType<typeof listTrades>>[number];
 
-export function TradeTable({ trades }: { trades: Trade[] }) {
+interface Strategy {
+  id: number;
+  name: string;
+}
+
+export function TradeTable({ trades, allStrategies }: { trades: Trade[]; allStrategies: Strategy[] }) {
   if (trades.length === 0) {
     return <p className="text-sm text-muted-foreground">Keine Trades gefunden.</p>;
   }
@@ -64,13 +70,11 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
               {formatMoney(trade.netPnl)}
             </TableCell>
             <TableCell>
-              <div className="flex flex-wrap gap-1">
-                {trade.tradeStrategies.map((ts) => (
-                  <Badge key={ts.strategyId} variant="outline">
-                    {ts.strategy.name}
-                  </Badge>
-                ))}
-              </div>
+              <InlineStrategyPicker
+                tradeId={trade.id}
+                allStrategies={allStrategies}
+                assignedStrategies={trade.tradeStrategies.map((ts) => ts.strategy)}
+              />
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap gap-1">

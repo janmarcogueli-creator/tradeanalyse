@@ -8,6 +8,13 @@
       "when": 1786007879113,
       "tag": "0000_flippant_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786370200888,
+      "tag": "0001_normal_risque",
+      "breakpoints": true
     }
   ]
 }

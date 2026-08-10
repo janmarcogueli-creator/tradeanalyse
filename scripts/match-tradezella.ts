@@ -39,6 +39,17 @@ function symbolCandidates(symbol: string): string[] {
   return Array.from(candidates);
 }
 
+// For options, IBKR's Symbol is the full OCC-style contract string ("QQQ
+// 260831C00714000") while TradeZella only exports the underlying ticker
+// ("QQQ") — an exact match never fires, so also accept "<candidate> " as a
+// prefix (the space guards against a different ticker that merely starts
+// with the same letters, e.g. "TSLA" vs "TSLAX").
+function symbolMatches(dbSymbol: string, tzSymbol: string): boolean {
+  const dbUpper = dbSymbol.toUpperCase();
+  const candidates = symbolCandidates(tzSymbol.toUpperCase());
+  return candidates.includes(dbUpper) || candidates.some((c) => dbUpper.startsWith(`${c} `));
+}
+
 async function main() {
   const csv = fs.readFileSync(csvPath, "utf-8");
   const rows = parse(csv, { columns: true, skip_empty_lines: true, trim: true }) as TradeZellaRow[];
@@ -62,11 +73,10 @@ async function main() {
   for (const row of rows) {
     if (!row.Symbol || !row["Open Date"]) continue;
     const side = row.Side?.toLowerCase() === "short" ? "short" : "long";
-    const candidates = symbolCandidates(row.Symbol.toUpperCase());
 
     const dbCandidates = allTrades.filter(
       (t) =>
-        candidates.includes(t.symbol.toUpperCase()) &&
+        symbolMatches(t.symbol, row.Symbol) &&
         t.direction === side &&
         t.openTime.startsWith(row["Open Date"]),
     );

@@ -19,6 +19,7 @@ export async function POST(request: Request) {
       description: body.description || null,
       rulesText: body.rulesText || null,
       color: body.color || null,
+      category: body.category || null,
     })
     .returning();
   return NextResponse.json(created);

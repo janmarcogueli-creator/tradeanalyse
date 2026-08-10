@@ -3,9 +3,12 @@ import {
   calculateMetrics,
   calcDailyPnl,
   calcPnlByWeekdayHour,
+  calcPnlByMonth,
   buildPnlHistogram,
+  getTopTrades,
   type DailyPnl,
   type HistogramBucket,
+  type MonthBreakdown,
   type WeekdayBreakdown,
 } from "./calculate";
 import { buildEquityCurve } from "./equity";
@@ -43,6 +46,7 @@ export interface DurationPnlPoint {
 export interface DashboardPayload {
   metrics: MetricsResult;
   weekdayBreakdown: WeekdayBreakdown[];
+  monthBreakdown: MonthBreakdown[];
   byStrategy: GroupMetrics[];
   byAssetClass: GroupMetrics[];
   bySymbol: GroupMetrics[];
@@ -51,6 +55,8 @@ export interface DashboardPayload {
   dailyPnl: DailyPnl[];
   histogram: HistogramBucket[];
   durationVsPnl: DurationPnlPoint[];
+  topWinners: ClosedTrade[];
+  topLosers: ClosedTrade[];
 }
 
 function sortByNetPnlDesc(a: GroupMetrics, b: GroupMetrics) {
@@ -83,9 +89,12 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     bySymbolMap.set(t.symbol, list);
   }
 
+  const { winners, losers } = getTopTrades(closed);
+
   return {
     metrics: calculateMetrics(closed),
     weekdayBreakdown: calcPnlByWeekdayHour(closed),
+    monthBreakdown: calcPnlByMonth(closed),
     byStrategy: Array.from(byStrategyMap.entries())
       .map(([key, { label, trades }]) => ({ key, label, metrics: calculateMetrics(trades) }))
       .sort(sortByNetPnlDesc),
@@ -102,5 +111,7 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     durationVsPnl: closed
       .filter((t): t is ClosedTrade & { holdingSeconds: number } => t.holdingSeconds !== null)
       .map((t) => ({ symbol: t.symbol, holdingSeconds: t.holdingSeconds, netPnl: t.netPnl })),
+    topWinners: winners,
+    topLosers: losers,
   };
 }

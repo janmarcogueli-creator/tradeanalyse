@@ -21,20 +21,24 @@ interface StrategyFormValues {
   name: string;
   description: string;
   rulesText: string;
+  category: string;
 }
 
 export function StrategyForm({
   trigger,
   initial,
+  existingCategories = [],
 }: {
   trigger: React.ReactElement;
   initial?: StrategyFormValues;
+  existingCategories?: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [rulesText, setRulesText] = useState(initial?.rulesText ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
   const [pending, setPending] = useState(false);
 
   async function submit() {
@@ -46,7 +50,7 @@ export function StrategyForm({
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, rulesText }),
+        body: JSON.stringify({ name, description, rulesText, category: category.trim() || null }),
       });
       if (!res.ok) throw new Error();
       setOpen(false);
@@ -69,6 +73,21 @@ export function StrategyForm({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="strategy-name">Name</Label>
             <Input id="strategy-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="strategy-category">Kategorie</Label>
+            <Input
+              id="strategy-category"
+              list="strategy-category-options"
+              placeholder="Bestehende wählen oder neue eingeben..."
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
+            <datalist id="strategy-category-options">
+              {existingCategories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="strategy-description">Beschreibung</Label>

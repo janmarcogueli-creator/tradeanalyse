@@ -8,6 +8,7 @@ const titles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/week": "Wochen-Dashboard",
   "/dashboard/month": "Monats-Dashboard",
+  "/analysis": "Analyse",
   "/trades": "Trades",
   "/strategies": "Strategien",
   "/insights": "Insights",

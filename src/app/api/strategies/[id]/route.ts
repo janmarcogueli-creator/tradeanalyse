@@ -16,6 +16,7 @@ export async function PATCH(
   if (body.rulesText !== undefined) values.rulesText = body.rulesText;
   if (body.color !== undefined) values.color = body.color;
   if (body.status !== undefined) values.status = body.status;
+  if (body.category !== undefined) values.category = body.category;
 
   const [updated] = await db
     .update(strategies)
