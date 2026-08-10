@@ -47,21 +47,35 @@ function mapPutCall(raw: FlexTradeXml): "P" | "C" | null {
   return null;
 }
 
-function ymdToIso(ymd: string): string {
-  return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
+// IBKR's own report types disagree on date format: the Trade Confirmation
+// report (XML and CSV) uses compact "YYYYMMDD", while the Activity Statement
+// CSV uses dashed "YYYY-MM-DD" — normalize both to ISO.
+function normalizeDate(raw: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (/^\d{8}$/.test(raw)) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  throw new MappingError(`Unrecognized date format "${raw}"`);
+}
+
+// Same disagreement for the combined date+time field: Trade Confirmation
+// uses "YYYYMMDD;HHMMSS", Activity Statement uses "YYYY-MM-DD HH:MM:SS".
+// Returns compact "HHMMSS" (matching the legacy TradeTime column format) so
+// callers only ever deal with one shape.
+function extractTime(dateTimeRaw: string): string | undefined {
+  if (dateTimeRaw.includes(";")) {
+    const time = dateTimeRaw.split(";")[1]?.trim().split(" ")[0];
+    return time || undefined;
+  }
+  const match = /\d{4}-\d{2}-\d{2}\s+(\d{2}):(\d{2}):(\d{2})/.exec(dateTimeRaw);
+  return match ? `${match[1]}${match[2]}${match[3]}` : undefined;
 }
 
 function mapDatetime(raw: FlexTradeXml): { tradeDate: string; datetime: string } {
   if (!raw.tradeDate) {
     throw new MappingError(`Missing tradeDate for execId ${raw.ibExecID ?? "?"}`);
   }
-  const tradeDate = ymdToIso(raw.tradeDate);
+  const tradeDate = normalizeDate(raw.tradeDate);
 
-  let time = raw.tradeTime;
-  if (raw.dateTime) {
-    const parts = raw.dateTime.split(";");
-    if (parts[1]) time = parts[1].trim().split(" ")[0];
-  }
+  const time = raw.dateTime ? extractTime(raw.dateTime) : raw.tradeTime;
 
   const datetime = time
     ? `${tradeDate}T${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4, 6)}`
@@ -99,11 +113,14 @@ export function mapFlexTrade(raw: FlexTradeXml): NormalizedFill {
     exchange: raw.exchange || raw.listingExchange || null,
     multiplier: raw.multiplier ? Number(raw.multiplier) : 1,
     strike: raw.strike ? Number(raw.strike) : null,
-    expiry: raw.expiry ? ymdToIso(raw.expiry) : null,
+    expiry: raw.expiry ? normalizeDate(raw.expiry) : null,
     putCall: mapPutCall(raw),
     buySell: mapBuySell(raw),
     openClose: mapOpenClose(raw),
-    quantity: toNumber(raw.quantity, "quantity", raw.ibExecID),
+    // Some report types (Activity Statement) sign quantity by direction
+    // (negative for sells) instead of leaving it an unsigned magnitude —
+    // buySell is always the authoritative direction, so normalize to abs().
+    quantity: Math.abs(toNumber(raw.quantity, "quantity", raw.ibExecID)),
     price: toNumber(raw.tradePrice, "tradePrice", raw.ibExecID),
     proceeds: toNumber(raw.proceeds, "proceeds", raw.ibExecID),
     commission: Math.abs(toNumber(raw.ibCommission, "ibCommission", raw.ibExecID)),

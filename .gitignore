@@ -49,3 +49,6 @@ next-env.d.ts
 /data/imports/
 /data/attachments/
 !/data/fixtures/
+
+# personal trade history exports (real financial data) — never committed
+/data/trades_*.csv

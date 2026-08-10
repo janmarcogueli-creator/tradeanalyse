@@ -38,6 +38,17 @@ describe("mapFlexTrade", () => {
     expect(fill.multiplier).toBe(1);
   });
 
+  // The Activity Statement report signs quantity by direction (negative for
+  // sells) instead of leaving it an unsigned magnitude like Trade
+  // Confirmation does — observed directly from a real account. groupTrades
+  // relies on quantity always being a positive magnitude (direction comes
+  // from buySell alone), so a signed sell quantity must be normalized here.
+  it("normalizes a signed sell quantity to a positive magnitude", () => {
+    const fill = mapFlexTrade(baseTrade({ buySell: "SELL", quantity: "-40" }));
+    expect(fill.quantity).toBe(40);
+    expect(fill.buySell).toBe("SELL");
+  });
+
   it("detects ETF via STK + subCategory=ETF", () => {
     const fill = mapFlexTrade(baseTrade({ symbol: "SPY", subCategory: "ETF" }));
     expect(fill.assetCategory).toBe("ETF");
@@ -90,5 +101,37 @@ describe("mapFlexTrade", () => {
 
   it("throws MappingError for invalid numeric fields", () => {
     expect(() => mapFlexTrade(baseTrade({ quantity: "not-a-number" }))).toThrow(MappingError);
+  });
+
+  // IBKR's Activity Statement report uses dashed dates ("YYYY-MM-DD") and a
+  // space-separated combined datetime ("YYYY-MM-DD HH:MM:SS"), unlike the
+  // Trade Confirmation report's compact "YYYYMMDD" / "YYYYMMDD;HHMMSS" —
+  // observed directly from a real account, not documented anywhere obvious.
+  it("handles the Activity Statement's dashed date + space-separated datetime", () => {
+    const fill = mapFlexTrade(
+      baseTrade({
+        tradeDate: "2026-07-14",
+        tradeTime: undefined,
+        dateTime: "2026-07-14 10:15:22",
+      }),
+    );
+    expect(fill.tradeDate).toBe("2026-07-14");
+    expect(fill.datetime).toBe("2026-07-14T10:15:22");
+  });
+
+  it("still handles the Trade Confirmation report's compact date + semicolon datetime", () => {
+    const fill = mapFlexTrade(
+      baseTrade({
+        tradeDate: "20240102",
+        tradeTime: undefined,
+        dateTime: "20240102;093500",
+      }),
+    );
+    expect(fill.tradeDate).toBe("2024-01-02");
+    expect(fill.datetime).toBe("2024-01-02T09:35:00");
+  });
+
+  it("throws MappingError for an unrecognized date format", () => {
+    expect(() => mapFlexTrade(baseTrade({ tradeDate: "07/14/2026" }))).toThrow(MappingError);
   });
 });
