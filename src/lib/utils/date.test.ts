@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { getCurrentMonthRange, getCurrentWeekRange } from "./date";
+import { getCurrentMonthRange, getCurrentWeekRange, resolveTimeframePreset } from "./date";
 
 describe("date range helpers (timezone-safe)", () => {
   afterEach(() => {
@@ -31,5 +31,29 @@ describe("date range helpers (timezone-safe)", () => {
     const { from, to } = getCurrentWeekRange();
     expect(from).toBe("2026-08-03"); // still the same Monday
     expect(to).toBe("2026-08-09");
+  });
+});
+
+describe("resolveTimeframePreset", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("all/custom return no bounds", () => {
+    expect(resolveTimeframePreset("all")).toEqual({});
+    expect(resolveTimeframePreset("custom")).toEqual({});
+  });
+
+  it("ytd returns Jan 1 of the current year with no upper bound", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 6, 16, 0, 0));
+    expect(resolveTimeframePreset("ytd")).toEqual({ dateFrom: "2026-01-01" });
+  });
+
+  it("week/month delegate to the matching range helper", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 6, 16, 0, 0));
+    expect(resolveTimeframePreset("week")).toEqual({ dateFrom: "2026-08-03", dateTo: "2026-08-06" });
+    expect(resolveTimeframePreset("month")).toEqual({ dateFrom: "2026-08-01", dateTo: "2026-08-06" });
   });
 });

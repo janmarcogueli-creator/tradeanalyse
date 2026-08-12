@@ -191,6 +191,22 @@ export function calcPnlByMonth(trades: ClosedTrade[]): MonthBreakdown[] {
     }));
 }
 
+export interface SymbolFrequency {
+  symbol: string;
+  count: number;
+}
+
+/** Most-traded symbols by trade count (not PnL) — a separate lens from the
+ * PnL-ranked symbol breakdown, e.g. to spot overtrading a symbol. */
+export function calcSymbolTradeCounts(trades: ClosedTrade[], topN = 10): SymbolFrequency[] {
+  const counts = new Map<string, number>();
+  for (const t of trades) counts.set(t.symbol, (counts.get(t.symbol) ?? 0) + 1);
+  return Array.from(counts.entries())
+    .map(([symbol, count]) => ({ symbol, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, topN);
+}
+
 /** Best/worst N closed trades by netPnl — a quick winners/losers leaderboard. */
 export function getTopTrades(
   trades: ClosedTrade[],

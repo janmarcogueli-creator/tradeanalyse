@@ -12,12 +12,14 @@ import type { DashboardPayload, GroupMetrics } from "@/lib/metrics/buildDashboar
 import { formatDuration, formatMoney, formatPercent, formatRatio, weekdayLabel } from "@/lib/utils/format";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { DrawdownChart } from "@/components/charts/DrawdownChart";
-import { PnlCalendarHeatmap } from "@/components/charts/PnlCalendarHeatmap";
 import { WinLossHistogram } from "@/components/charts/WinLossHistogram";
 import { StrategyPerformanceChart } from "@/components/charts/StrategyPerformanceChart";
+import { StrategyRadarChart } from "@/components/charts/StrategyRadarChart";
 import { AssetClassPerformanceChart } from "@/components/charts/AssetClassPerformanceChart";
 import { SymbolPerformanceChart } from "@/components/charts/SymbolPerformanceChart";
+import { CountBarChart } from "@/components/charts/CountBarChart";
 import { DurationVsPnlScatter } from "@/components/charts/DurationVsPnlScatter";
+import { ProfitFactorGauge } from "@/components/charts/ProfitFactorGauge";
 
 function GroupTable({
   title,
@@ -110,6 +112,15 @@ export function MetricsOverview({ data }: { data: DashboardPayload }) {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Profit Factor</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProfitFactorGauge profitFactor={metrics.profitFactor} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Equity Curve</CardTitle>
         </CardHeader>
         <CardContent>
@@ -136,15 +147,6 @@ export function MetricsOverview({ data }: { data: DashboardPayload }) {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">PnL-Kalender</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PnlCalendarHeatmap data={data.dailyPnl} />
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4 lg:grid-cols-2">
         <GroupTable
           title="Nach Strategie"
@@ -160,13 +162,30 @@ export function MetricsOverview({ data }: { data: DashboardPayload }) {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Strategie-Vergleich</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StrategyRadarChart groups={data.byStrategy} />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Symbole (Top/Flop)</CardTitle>
           </CardHeader>
           <CardContent>
             <SymbolPerformanceChart groups={data.bySymbol} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Meistgehandelte Symbole</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CountBarChart data={data.symbolFrequency.map((s) => ({ label: s.symbol, count: s.count }))} />
           </CardContent>
         </Card>
         <Card>

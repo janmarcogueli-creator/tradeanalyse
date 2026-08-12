@@ -25,3 +25,28 @@ export function getCurrentMonthRange(): { from: string; to: string } {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   return { from: toIsoDate(firstOfMonth), to: toIsoDate(now) };
 }
+
+export type TimeframePreset = "all" | "ytd" | "week" | "month" | "custom";
+
+/** Resolves a named dashboard timeframe preset to a dateFrom/dateTo pair.
+ * "all" and "custom" return no bounds — "custom" leaves dateFrom/dateTo to
+ * whatever the caller already has from the URL (typically user-picked date
+ * inputs), it's only listed here so callers can switch over the full set of
+ * presets exhaustively. */
+export function resolveTimeframePreset(preset: TimeframePreset): { dateFrom?: string; dateTo?: string } {
+  switch (preset) {
+    case "ytd":
+      return { dateFrom: `${new Date().getFullYear()}-01-01` };
+    case "week": {
+      const { from, to } = getCurrentWeekRange();
+      return { dateFrom: from, dateTo: to };
+    }
+    case "month": {
+      const { from, to } = getCurrentMonthRange();
+      return { dateFrom: from, dateTo: to };
+    }
+    case "all":
+    case "custom":
+      return {};
+  }
+}

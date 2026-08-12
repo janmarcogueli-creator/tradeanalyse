@@ -4,11 +4,13 @@ import {
   calcDailyPnl,
   calcPnlByWeekdayHour,
   calcPnlByMonth,
+  calcSymbolTradeCounts,
   buildPnlHistogram,
   getTopTrades,
   type DailyPnl,
   type HistogramBucket,
   type MonthBreakdown,
+  type SymbolFrequency,
   type WeekdayBreakdown,
 } from "./calculate";
 import { buildEquityCurve } from "./equity";
@@ -50,6 +52,7 @@ export interface DashboardPayload {
   byStrategy: GroupMetrics[];
   byAssetClass: GroupMetrics[];
   bySymbol: GroupMetrics[];
+  symbolFrequency: SymbolFrequency[];
   equityCurve: EquityPoint[];
   drawdownCurve: DrawdownPoint[];
   dailyPnl: DailyPnl[];
@@ -104,6 +107,7 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     bySymbol: Array.from(bySymbolMap.entries())
       .map(([key, trades]) => ({ key, label: key, metrics: calculateMetrics(trades) }))
       .sort(sortByNetPnlDesc),
+    symbolFrequency: calcSymbolTradeCounts(closed),
     equityCurve: buildEquityCurve(closed),
     drawdownCurve: buildDrawdownCurve(buildEquityCurve(closed)),
     dailyPnl: calcDailyPnl(closed),
