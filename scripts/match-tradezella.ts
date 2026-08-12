@@ -90,7 +90,7 @@ async function main() {
     // to break the tie in practice, so narrow to it before giving up.
     if (dbCandidates.length > 1) {
       const tzPnl = parsePnl(row["Net P&L"]);
-      const byPnl = dbCandidates.filter((t) => Math.abs(t.netPnl - tzPnl) < 0.5);
+      const byPnl = dbCandidates.filter((t) => t.netPnl !== null && Math.abs(t.netPnl - tzPnl) < 0.5);
       if (byPnl.length === 1) dbCandidates = byPnl;
     }
 

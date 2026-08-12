@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, like, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, like, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { fills, notes, trades } from "@/db/schema";
 import { buildTradeWhereClause } from "@/lib/filters/buildWhereClause";
@@ -24,7 +24,9 @@ export async function listTrades(filter: TradeFilter = {}) {
 
   const rows = await db.query.trades.findMany({
     where: conditions.length ? and(...conditions) : undefined,
-    orderBy: [desc(trades.openTime)],
+    // Open positions first (case expression sorts them into bucket 0), then
+    // newest-opened first within each bucket.
+    orderBy: [sql`CASE WHEN ${trades.status} = 'open' THEN 0 ELSE 1 END`, desc(trades.openTime)],
     with: {
       tradeStrategies: { with: { strategy: true } },
       tradeTags: { with: { tag: true } },
