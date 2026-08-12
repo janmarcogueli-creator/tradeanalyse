@@ -30,6 +30,7 @@ export function toClosedTrade(t: JoinedTrade): ClosedTrade {
     grossPnl: t.grossPnl ?? 0,
     commissions: t.commissions,
     holdingSeconds: t.holdingSeconds,
+    rMultiple: t.rMultiple,
   };
 }
 
@@ -51,6 +52,7 @@ export interface DashboardPayload {
   monthBreakdown: MonthBreakdown[];
   byStrategy: GroupMetrics[];
   byAssetClass: GroupMetrics[];
+  byDirection: GroupMetrics[];
   bySymbol: GroupMetrics[];
   symbolFrequency: SymbolFrequency[];
   equityCurve: EquityPoint[];
@@ -85,6 +87,13 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
     }
   }
 
+  const byDirectionMap = new Map<string, ClosedTrade[]>();
+  for (const t of closed) {
+    const list = byDirectionMap.get(t.direction) ?? [];
+    list.push(t);
+    byDirectionMap.set(t.direction, list);
+  }
+
   const bySymbolMap = new Map<string, ClosedTrade[]>();
   for (const t of closed) {
     const list = bySymbolMap.get(t.symbol) ?? [];
@@ -103,6 +112,9 @@ export function buildDashboardPayload(joinedTrades: JoinedTrade[]): DashboardPay
       .sort(sortByNetPnlDesc),
     byAssetClass: Array.from(byAssetClassMap.entries())
       .map(([key, trades]) => ({ key, label: key, metrics: calculateMetrics(trades) }))
+      .sort(sortByNetPnlDesc),
+    byDirection: Array.from(byDirectionMap.entries())
+      .map(([key, trades]) => ({ key, label: key === "long" ? "Long" : "Short", metrics: calculateMetrics(trades) }))
       .sort(sortByNetPnlDesc),
     bySymbol: Array.from(bySymbolMap.entries())
       .map(([key, trades]) => ({ key, label: key, metrics: calculateMetrics(trades) }))

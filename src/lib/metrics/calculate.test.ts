@@ -2,11 +2,16 @@ import { describe, it, expect } from "vitest";
 import {
   calcAvgHoldingTime,
   calcAvgWinLoss,
+  calcDayOutcomes,
   calcExpectancy,
+  calcGrowthPercent,
+  calcHoldingTimeDistribution,
   calcLargestWinLoss,
   calcPnlByMonth,
+  calcPnlByWeekdayAndHour,
   calcPnlByWeekdayHour,
   calcProfitFactor,
+  calcRMultipleDistribution,
   calcRRRatio,
   calcRecoveryFactor,
   calcSharpeRatio,
@@ -14,6 +19,7 @@ import {
   calculateMetrics,
   getTopTrades,
 } from "./calculate";
+import type { DailyPnl } from "./calculate";
 import type { ClosedTrade } from "./types";
 
 function trade(overrides: Partial<ClosedTrade> & { id: number; netPnl: number }): ClosedTrade {
@@ -25,6 +31,7 @@ function trade(overrides: Partial<ClosedTrade> & { id: number; netPnl: number })
     grossPnl: overrides.netPnl,
     commissions: 0,
     holdingSeconds: null,
+    rMultiple: null,
     ...overrides,
   };
 }
@@ -183,5 +190,91 @@ describe("getTopTrades", () => {
 
   it("returns empty arrays for no trades", () => {
     expect(getTopTrades([])).toEqual({ winners: [], losers: [] });
+  });
+});
+
+describe("calcGrowthPercent", () => {
+  it("returns null when there's no baseline history", () => {
+    expect(calcGrowthPercent([trade({ id: 1, netPnl: 100 })], [])).toBeNull();
+  });
+
+  it("returns null when the baseline nets to exactly zero", () => {
+    const baseline = [trade({ id: 1, netPnl: 50 }), trade({ id: 2, netPnl: -50 })];
+    expect(calcGrowthPercent([trade({ id: 3, netPnl: 100 })], baseline)).toBeNull();
+  });
+
+  it("divides period netPnl by the absolute baseline netPnl", () => {
+    const baseline = [trade({ id: 1, netPnl: 1000 })];
+    const period = [trade({ id: 2, netPnl: 250 })];
+    expect(calcGrowthPercent(period, baseline)).toBeCloseTo(0.25);
+  });
+});
+
+describe("calcDayOutcomes", () => {
+  it("classifies days by netPnl sign", () => {
+    const daily: DailyPnl[] = [
+      { date: "2024-01-01", netPnl: 100, tradeCount: 1 },
+      { date: "2024-01-02", netPnl: -50, tradeCount: 1 },
+      { date: "2024-01-03", netPnl: 0, tradeCount: 0 },
+      { date: "2024-01-04", netPnl: 30, tradeCount: 2 },
+    ];
+    expect(calcDayOutcomes(daily)).toEqual({ winningDays: 2, losingDays: 1, breakEvenDays: 1 });
+  });
+
+  it("returns all zero for no days", () => {
+    expect(calcDayOutcomes([])).toEqual({ winningDays: 0, losingDays: 0, breakEvenDays: 0 });
+  });
+});
+
+describe("calcPnlByWeekdayAndHour", () => {
+  it("returns a full 7x24 grid and buckets trades into the right cell", () => {
+    const result = calcPnlByWeekdayAndHour([
+      trade({ id: 1, netPnl: 100, closeTime: "2024-01-01T10:30:00" }), // Monday, hour 10
+      trade({ id: 2, netPnl: 50, closeTime: "2024-01-01T10:45:00" }), // same cell
+    ]);
+    expect(result).toHaveLength(7 * 24);
+    const cell = result.find((c) => c.weekday === 1 && c.hour === 10)!;
+    expect(cell.tradeCount).toBe(2);
+    expect(cell.netPnl).toBe(150);
+    const emptyCell = result.find((c) => c.weekday === 1 && c.hour === 11)!;
+    expect(emptyCell.tradeCount).toBe(0);
+    expect(emptyCell.netPnl).toBe(0);
+  });
+});
+
+describe("calcHoldingTimeDistribution", () => {
+  it("buckets holdingSeconds into even-width bins", () => {
+    const trades = [
+      trade({ id: 1, netPnl: 10, holdingSeconds: 0 }),
+      trade({ id: 2, netPnl: 10, holdingSeconds: 100 }),
+    ];
+    const result = calcHoldingTimeDistribution(trades, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0].count + result[1].count).toBe(2);
+  });
+
+  it("ignores trades without a holdingSeconds value", () => {
+    const trades = [trade({ id: 1, netPnl: 10 })]; // holdingSeconds defaults to null
+    expect(calcHoldingTimeDistribution(trades)).toEqual([]);
+  });
+
+  it("returns [] for no trades", () => {
+    expect(calcHoldingTimeDistribution([])).toEqual([]);
+  });
+});
+
+describe("calcRMultipleDistribution", () => {
+  it("ignores trades without an rMultiple", () => {
+    expect(calcRMultipleDistribution([trade({ id: 1, netPnl: 10 })])).toEqual([]);
+  });
+
+  it("buckets rMultiple values into even-width bins", () => {
+    const trades = [
+      trade({ id: 1, netPnl: -10, rMultiple: -1 }),
+      trade({ id: 2, netPnl: 20, rMultiple: 2 }),
+    ];
+    const result = calcRMultipleDistribution(trades, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0].count + result[1].count).toBe(2);
   });
 });

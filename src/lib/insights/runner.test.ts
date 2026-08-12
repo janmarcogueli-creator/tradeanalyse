@@ -21,6 +21,7 @@ describe("runInsightRules", () => {
           grossPnl: -50,
           commissions: 0,
           holdingSeconds: null,
+    rMultiple: null,
         },
       ],
       byStrategy: [],

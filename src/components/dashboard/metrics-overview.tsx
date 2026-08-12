@@ -8,7 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatCard } from "./stat-card";
-import type { DashboardPayload, GroupMetrics } from "@/lib/metrics/buildDashboardPayload";
+import { GroupTable } from "./group-table";
+import type { DashboardPayload } from "@/lib/metrics/buildDashboardPayload";
 import { formatDuration, formatMoney, formatPercent, formatRatio, weekdayLabel } from "@/lib/utils/format";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { DrawdownChart } from "@/components/charts/DrawdownChart";
@@ -20,61 +21,6 @@ import { SymbolPerformanceChart } from "@/components/charts/SymbolPerformanceCha
 import { CountBarChart } from "@/components/charts/CountBarChart";
 import { DurationVsPnlScatter } from "@/components/charts/DurationVsPnlScatter";
 import { ProfitFactorGauge } from "@/components/charts/ProfitFactorGauge";
-
-function GroupTable({
-  title,
-  groups,
-  emptyLabel,
-  chart,
-}: {
-  title: string;
-  groups: GroupMetrics[];
-  emptyLabel: string;
-  chart?: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
-        ) : (
-          <>
-            {chart}
-            <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{title}</TableHead>
-                <TableHead className="text-right">Trades</TableHead>
-                <TableHead className="text-right">Winrate</TableHead>
-                <TableHead className="text-right">Profit Factor</TableHead>
-                <TableHead className="text-right">Netto-PnL</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map((g) => (
-                <TableRow key={g.key}>
-                  <TableCell className="font-medium">{g.label}</TableCell>
-                  <TableCell className="text-right">{g.metrics.tradeCount}</TableCell>
-                  <TableCell className="text-right">{formatPercent(g.metrics.winrate)}</TableCell>
-                  <TableCell className="text-right">{formatRatio(g.metrics.profitFactor)}</TableCell>
-                  <TableCell
-                    className={`text-right font-medium ${g.metrics.netPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}
-                  >
-                    {formatMoney(g.metrics.netPnl)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export function MetricsOverview({ data }: { data: DashboardPayload }) {
   const { metrics } = data;

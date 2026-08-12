@@ -222,6 +222,123 @@ export function getTopTrades(
   };
 }
 
+/** Period net PnL relative to the equity built up before the period started
+ * (sum of netPnl for trades closed before the period). Returns null when
+ * there's no prior trading history to anchor against (e.g. an All-Time
+ * view, or a baseline that nets to exactly zero) — "growth" is only
+ * meaningful relative to a real prior balance. */
+export function calcGrowthPercent(periodTrades: ClosedTrade[], baselineTrades: ClosedTrade[]): number | null {
+  if (baselineTrades.length === 0) return null;
+  const baseline = baselineTrades.reduce((sum, t) => sum + t.netPnl, 0);
+  if (baseline === 0) return null;
+  const periodNetPnl = periodTrades.reduce((sum, t) => sum + t.netPnl, 0);
+  return periodNetPnl / Math.abs(baseline);
+}
+
+export interface DayOutcomes {
+  winningDays: number;
+  losingDays: number;
+  breakEvenDays: number;
+}
+
+/** Classifies each day from calcDailyPnl() by outcome sign — a coarser lens
+ * than per-trade winrate (a day can hold several trades netting to one
+ * outcome). */
+export function calcDayOutcomes(dailyPnl: DailyPnl[]): DayOutcomes {
+  let winningDays = 0;
+  let losingDays = 0;
+  let breakEvenDays = 0;
+  for (const d of dailyPnl) {
+    if (d.netPnl > 0) winningDays++;
+    else if (d.netPnl < 0) losingDays++;
+    else breakEvenDays++;
+  }
+  return { winningDays, losingDays, breakEvenDays };
+}
+
+export interface WeekdayHourBreakdown {
+  weekday: number; // 0=Sunday..6=Saturday
+  hour: number; // 0-23, local time
+  netPnl: number;
+  tradeCount: number;
+}
+
+/** Full 7x24 weekday-by-hour grid (including empty cells) bucketed by
+ * closeTime, for a "best time to trade" heatmap. */
+export function calcPnlByWeekdayAndHour(trades: ClosedTrade[]): WeekdayHourBreakdown[] {
+  const cells = new Map<string, { netPnl: number; tradeCount: number }>();
+  for (const t of trades) {
+    const d = new Date(t.closeTime);
+    const key = `${d.getDay()}-${d.getHours()}`;
+    const entry = cells.get(key) ?? { netPnl: 0, tradeCount: 0 };
+    entry.netPnl += t.netPnl;
+    entry.tradeCount += 1;
+    cells.set(key, entry);
+  }
+
+  const result: WeekdayHourBreakdown[] = [];
+  for (let weekday = 0; weekday < 7; weekday++) {
+    for (let hour = 0; hour < 24; hour++) {
+      const entry = cells.get(`${weekday}-${hour}`) ?? { netPnl: 0, tradeCount: 0 };
+      result.push({ weekday, hour, ...entry });
+    }
+  }
+  return result;
+}
+
+/** Even-width holding-time histogram, same bucketing approach as
+ * buildPnlHistogram() but over holdingSeconds instead of netPnl. */
+export function calcHoldingTimeDistribution(trades: ClosedTrade[], bucketCount = 8): HistogramBucket[] {
+  const durations = trades
+    .map((t) => t.holdingSeconds)
+    .filter((s): s is number => s !== null);
+  if (durations.length === 0) return [];
+
+  const min = Math.min(...durations);
+  const max = Math.max(...durations);
+  if (min === max) return [{ rangeStart: min, rangeEnd: max, count: durations.length }];
+
+  const width = (max - min) / bucketCount;
+  const buckets: HistogramBucket[] = Array.from({ length: bucketCount }, (_, i) => ({
+    rangeStart: min + i * width,
+    rangeEnd: min + (i + 1) * width,
+    count: 0,
+  }));
+
+  for (const duration of durations) {
+    const index = Math.min(bucketCount - 1, Math.floor((duration - min) / width));
+    buckets[index].count += 1;
+  }
+  return buckets;
+}
+
+/** Even-width R-multiple histogram, for trades with a recorded initial risk
+ * (see initialRisk/rMultiple on manually entered trades). Unlike the
+ * holding-time histogram, sign-coloring the bars is meaningful here — a
+ * negative R is a loss beyond planned risk, a positive R is a win — so
+ * this reuses the same bucket shape as buildPnlHistogram/WinLossHistogram. */
+export function calcRMultipleDistribution(trades: ClosedTrade[], bucketCount = 6): HistogramBucket[] {
+  const values = trades.map((t) => t.rMultiple).filter((r): r is number => r !== null);
+  if (values.length === 0) return [];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min === max) return [{ rangeStart: min, rangeEnd: max, count: values.length }];
+
+  const width = (max - min) / bucketCount;
+  const buckets: HistogramBucket[] = Array.from({ length: bucketCount }, (_, i) => ({
+    rangeStart: min + i * width,
+    rangeEnd: min + (i + 1) * width,
+    count: 0,
+  }));
+
+  for (const value of values) {
+    const index = Math.min(bucketCount - 1, Math.floor((value - min) / width));
+    buckets[index].count += 1;
+  }
+  return buckets;
+}
+
 export function calculateMetrics(trades: ClosedTrade[]): MetricsResult {
   const { avgWin, avgLoss } = calcAvgWinLoss(trades);
   const { largestWin, largestLoss } = calcLargestWinLoss(trades);

@@ -8,6 +8,7 @@ export interface ClosedTrade {
   grossPnl: number;
   commissions: number;
   holdingSeconds: number | null;
+  rMultiple: number | null;
 }
 
 export interface MetricsResult {

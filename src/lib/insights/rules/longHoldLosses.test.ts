@@ -15,6 +15,7 @@ function trade(netPnl: number, holdingSeconds: number | null): ClosedTrade {
     grossPnl: netPnl,
     commissions: 0,
     holdingSeconds,
+    rMultiple: null,
   };
 }
 

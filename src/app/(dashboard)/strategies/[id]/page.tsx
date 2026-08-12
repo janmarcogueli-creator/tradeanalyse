@@ -47,6 +47,7 @@ export default async function StrategyDetailPage({
       grossPnl: t.grossPnl,
       commissions: t.commissions,
       holdingSeconds: t.holdingSeconds,
+      rMultiple: t.rMultiple,
     }));
   const equityCurve = buildEquityCurve(closedTrades);
 
