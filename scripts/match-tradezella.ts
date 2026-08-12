@@ -50,6 +50,10 @@ function symbolMatches(dbSymbol: string, tzSymbol: string): boolean {
   return candidates.includes(dbUpper) || candidates.some((c) => dbUpper.startsWith(`${c} `));
 }
 
+function parsePnl(raw: string): number {
+  return parseFloat((raw || "").replace(/[^0-9.-]/g, ""));
+}
+
 async function main() {
   const csv = fs.readFileSync(csvPath, "utf-8");
   const rows = parse(csv, { columns: true, skip_empty_lines: true, trim: true }) as TradeZellaRow[];
@@ -74,12 +78,21 @@ async function main() {
     if (!row.Symbol || !row["Open Date"]) continue;
     const side = row.Side?.toLowerCase() === "short" ? "short" : "long";
 
-    const dbCandidates = allTrades.filter(
+    let dbCandidates = allTrades.filter(
       (t) =>
         symbolMatches(t.symbol, row.Symbol) &&
         t.direction === side &&
         t.openTime.startsWith(row["Open Date"]),
     );
+
+    // Same symbol/direction/day can hold several round-trips (e.g. two TSLA
+    // options opened the same morning) — Net P&L is unique enough per trade
+    // to break the tie in practice, so narrow to it before giving up.
+    if (dbCandidates.length > 1) {
+      const tzPnl = parsePnl(row["Net P&L"]);
+      const byPnl = dbCandidates.filter((t) => Math.abs(t.netPnl - tzPnl) < 0.5);
+      if (byPnl.length === 1) dbCandidates = byPnl;
+    }
 
     if (dbCandidates.length === 1) {
       matched++;
