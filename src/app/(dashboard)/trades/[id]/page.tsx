@@ -83,6 +83,18 @@ export default async function TradeDetailPage({
             <p className="text-muted-foreground">Brutto-PnL</p>
             <p>{formatMoney(trade.grossPnl)}</p>
           </div>
+          {trade.initialRisk !== null && (
+            <>
+              <div>
+                <p className="text-muted-foreground">Risiko</p>
+                <p>{formatMoney(trade.initialRisk)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">R-Multiple</p>
+                <p>{trade.rMultiple !== null ? `${trade.rMultiple.toFixed(2)} R` : "–"}</p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -119,7 +131,11 @@ export default async function TradeDetailPage({
           <CardTitle className="text-base">Fills</CardTitle>
         </CardHeader>
         <CardContent>
-          <FillsTable fills={trade.fills} />
+          {trade.fills.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Manuell erfasst — keine Einzelausführungen.</p>
+          ) : (
+            <FillsTable fills={trade.fills} />
+          )}
         </CardContent>
       </Card>
 

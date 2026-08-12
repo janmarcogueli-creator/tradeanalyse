@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { listTrades, type TradeFilter } from "@/db/queries/trades";
 import { listStrategies } from "@/db/queries/strategies";
 import { listTags } from "@/db/queries/tags";
@@ -30,8 +32,11 @@ export default async function TradesPage({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Trades</CardTitle>
+        <Button render={<Link href="/trades/new" />} nativeButton={false}>
+          Trade anlegen
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <TradeFilterBar strategies={strategies} tags={tags} />
