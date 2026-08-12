@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Target,
+  Tag,
   Lightbulb,
   Upload,
   Settings,
@@ -31,6 +32,7 @@ const navItems = [
   { href: "/analysis", label: "Analyse", icon: SearchCode },
   { href: "/trades", label: "Trades", icon: ListChecks },
   { href: "/strategies", label: "Strategien", icon: Target },
+  { href: "/tags", label: "Tags", icon: Tag },
   { href: "/insights", label: "Insights", icon: Lightbulb },
   { href: "/import", label: "Import", icon: Upload },
 ];

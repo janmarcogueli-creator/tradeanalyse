@@ -11,6 +11,7 @@ const titles: Record<string, string> = {
   "/analysis": "Analyse",
   "/trades": "Trades",
   "/strategies": "Strategien",
+  "/tags": "Tags",
   "/insights": "Insights",
   "/import": "Import",
   "/settings": "Settings",

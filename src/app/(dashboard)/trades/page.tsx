@@ -35,7 +35,7 @@ export default async function TradesPage({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <TradeFilterBar strategies={strategies} tags={tags} />
-        <TradeTable trades={trades} allStrategies={strategies} />
+        <TradeTable trades={trades} allStrategies={strategies} allTags={tags} />
       </CardContent>
     </Card>
   );

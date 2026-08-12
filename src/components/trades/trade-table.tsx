@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { listTrades } from "@/db/queries/trades";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -9,8 +8,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/utils/format";
 import { InlineStrategyPicker } from "./inline-strategy-picker";
+import { InlineTagPicker } from "./inline-tag-picker";
 
 type Trade = Awaited<ReturnType<typeof listTrades>>[number];
 
@@ -19,7 +20,20 @@ interface Strategy {
   name: string;
 }
 
-export function TradeTable({ trades, allStrategies }: { trades: Trade[]; allStrategies: Strategy[] }) {
+interface Tag {
+  id: number;
+  name: string;
+}
+
+export function TradeTable({
+  trades,
+  allStrategies,
+  allTags,
+}: {
+  trades: Trade[];
+  allStrategies: Strategy[];
+  allTags: Tag[];
+}) {
   if (trades.length === 0) {
     return <p className="text-sm text-muted-foreground">Keine Trades gefunden.</p>;
   }
@@ -77,13 +91,11 @@ export function TradeTable({ trades, allStrategies }: { trades: Trade[]; allStra
               />
             </TableCell>
             <TableCell>
-              <div className="flex flex-wrap gap-1">
-                {trade.tradeTags.map((tt) => (
-                  <Badge key={tt.tagId} variant="secondary">
-                    {tt.tag.name}
-                  </Badge>
-                ))}
-              </div>
+              <InlineTagPicker
+                tradeId={trade.id}
+                allTags={allTags}
+                assignedTags={trade.tradeTags.map((tt) => tt.tag)}
+              />
             </TableCell>
           </TableRow>
         ))}
